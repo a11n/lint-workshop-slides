@@ -1,0 +1,32 @@
+/* custom styles can go here */
+
+/* general changes */
+.reveal section img {
+  margin: 0px 0px;
+  background: rgba(255, 255, 255, 0);
+  border: 0;
+  box-shadow: 0 0 0px rgba(0, 0, 0, 0); }
+
+.reveal a {
+  color: #88c540; }
+
+.reveal a:hover {
+  color: #e08610;
+  text-decoration: underline; }
+
+.reveal .progress span {
+  background: #88c540; }
+
+.reveal .slide-number {
+  color: #88c540; }
+
+/* slide specific changes */
+.aboutme img {
+  float:left;
+  width: 200px;
+  height: 200px;
+  border-radius: 100px; }
+
+.gettingstarted h3 {
+  text-transform: none;
+  font-size: 2.18em; }
