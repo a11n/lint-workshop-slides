@@ -20,6 +20,9 @@
 .reveal .slide-number {
   color: #88c540; }
 
+i {
+  margin: 0 8px 0 32px; }
+
 /* slide specific changes */
 .aboutme img {
   float:left;
