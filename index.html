@@ -1,0 +1,654 @@
+<!doctype html>
+<html lang="en">
+
+  <head>
+    <meta charset="utf-8">
+
+    <title>Custom Lint rules</title>
+
+    <meta name="description" content="Presentation about &#39;Custom Lint rules&#39;, hold at Droidcon Berlin 2015-06-03.">
+    <meta name="author" content="André Diermann">
+
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+
+    <link rel="stylesheet" href="css/reveal.css">
+    <link rel="stylesheet" href="css/theme/league.css" id="theme">
+
+    <!-- Code syntax highlighting -->
+    <link rel="stylesheet" href="css/highlight/styles/androidstudio.css" id="highlight-theme">
+
+    <!-- Printing and PDF exports -->
+    <script>
+      var link = document.createElement( 'link' );
+      link.rel = 'stylesheet';
+      link.type = 'text/css';
+      link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+      document.getElementsByTagName( 'head' )[0].appendChild( link );
+    </script>
+
+    <link rel="stylesheet" href="css/custom.css"><link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+
+  </head>
+
+  <body>
+
+    <div class="reveal">
+      <div class="slides"><section id="title" class="slide">
+<h1>Custom Lint rules</h1><h3>Improve your code quality<br/>with dedicated conventions</h3><p><img src="images/droidcon.png" alt="Droidcon Berlin, June 3rd 2015"></p>
+</section>
+<section id="about_me" class="aboutme slide">
+<p><img src="images/me.jpg" alt=""></p>
+<h1>André Diermann</h1><p>Software Architect @ <a href="http://it-objects.de">it-objects</a></p>
+</section>
+<section>
+<section id="motivation-motivation-in-words" class="slide">
+<h2>Our motivation for custom Lint rules</h2><h3>In words</h3><ul>
+<li>enterprise mobility solution<br/>(> 10.000 users in EU, Asia, USA)</li>
+<li>several developers working distributed<br/>in different countries</li>
+<li>complex business logic due to full offline mode</li>
+<li>custom application architecture</li>
+<li>huge code base</li>
+</ul>
+</section>
+<section id="motivation-motivation-in-numbers" class="slide">
+<h2>Our motivation for custom Lint rules</h2><h3>In numbers</h3><ul>
+<li>32 build variants</li>
+<li>>2.000 classes in ~100 packages<br/>(with ~150.000 lines of code)</li>
+<li>>200 screens with >1.500 widgets<br/>(>30.000 lines of XML)</li>
+<li>>3.500 string references<br />(>35.000 translations)</li>
+<li>...</li>
+</ul>
+</section>
+</section>
+<section id="agenda" class="slide">
+<h1>Agenda</h1><ul>
+<li>Introduction</li>
+<li>Lint API basics</li>
+<li>Hands-on: custom Lint rules</li>
+<li>Real world scenarios</li>
+<li>Q &amp; A</li>
+</ul>
+</section>
+<section>
+<section id="introduction-overview" class="slide">
+<h1>Introduction</h1><ul>
+<li>Lint</li>
+<li>Custom rules</li>
+<li>Challenges</li>
+</ul>
+</section>
+<section id="introduction-lint" class="slide">
+<h1>Lint</h1><ul>
+<li>tool for command-line and IDE</li>
+<li>scans all kind of development artifacts</li>
+<li>reports potential bugs, bad coding habits, broken conventions, ...</li>
+<li>features more than 200 built-in checks <em>(January 2015)</em></li>
+</ul>
+</section>
+<section id="introduction-lint-example-ide" class="slide">
+<h2>Example</h2><p><img src="images/01_lint_example_ide.png" alt=""></p>
+</section>
+<section id="introduction-lint-example-report" class="slide">
+<h2>Example</h2><p><img src="images/01_lint_example_report.png" alt=""></p>
+</section>
+<section id="introduction-custom-rules" class="slide">
+<h1>Custom rules</h1><h2>Motivation</h2><ul>
+<li>work in large and distributed teams requires dedicated conventions</li>
+<li>huge code bases require automated checks</li>
+<li>need for &#39;Android specific&#39; validations<br/> (vs. checkstyle, FindBugs, ...)</li>
+<li>...</li>
+</ul>
+</section>
+<section id="introduction-challenges" class="slide">
+<h1>Challenges</h1><h2>Writing custom Lint rules</h2><ul>
+<li>poor documentation</li>
+<li>bad testability</li>
+</ul>
+</section>
+</section>
+<section>
+<section id="lint_api_basics-overview" class="slide">
+<h1>Lint API basics</h1><p>Core principles of the Lint API</p>
+<ul>
+<li><code>Issue</code></li>
+<li><code>Detector</code></li>
+<li><code>Scanner</code></li>
+<li><code>IssueRegistry</code></li>
+</ul>
+</section>
+<section id="lint_api_basics-issue-defintion" class="slide">
+<h1>Issue</h1><blockquote>
+<p>An <code>Issue</code> is a type of problem you want to find and show to the user.</p>
+</blockquote>
+</section>
+<section id="lint_api_basics-issue-details" class="slide">
+<h1>Issue</h1><ul>
+<li>registered in an <code>IssueRegistry</code></li>
+<li>reported by a <code>Detector</code></li>
+<li>final class</li>
+<li>created by static factory method</li>
+<li>has certain attributes, such as<ul>
+<li><code>Severity</code></li>
+<li><code>Scope</code></li>
+<li>...</li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="lint_api_basics-issue-example" class="slide">
+<h1>Example</h1><pre><code class="lang-java"> <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> Issue ISSUE = Issue.create(
+    <span class="hljs-string">"HelloWorld"</span>,                                 <span class="hljs-comment">//ID</span>
+    <span class="hljs-string">"Unexpected application title"</span>,               <span class="hljs-comment">//brief description</span>
+    <span class="hljs-string">"The application title should"</span>                <span class="hljs-comment">//explanation</span>
+      + <span class="hljs-string">"state 'Hello world'"</span>,
+    Category.CORRECTNESS,                         <span class="hljs-comment">//category</span>
+    <span class="hljs-number">5</span>,                                            <span class="hljs-comment">//priority</span>
+    Severity.INFORMATIONAL,                       <span class="hljs-comment">//severity</span>
+    <span class="hljs-keyword">new</span> Implementation(                           <span class="hljs-comment">//implementation</span>
+        HelloWorldDetector.class,                 <span class="hljs-comment">//detector</span>
+        Scope.MANIFEST_SCOPE                      <span class="hljs-comment">//scope</span>
+    )
+);
+</code></pre>
+</section>
+<section id="lint_api_basics-detector-defintion" class="slide">
+<h1>Detector</h1><blockquote>
+<p>A <code>Detector</code> is responsible for scanning through code and finding <code>Issue</code> instances
+and reporting them.</p>
+</blockquote>
+</section>
+<section id="lint_api_basics-detector-details" class="slide">
+<h1>Detector</h1><ul>
+<li>implementation of a Lint rule</li>
+<li>analyzes development artifacts</li>
+<li>reports <code>Issues</code></li>
+<li>specialized by <code>Scanners</code></li>
+</ul>
+</section>
+<section id="lint_api_basics-detector-example" class="slide">
+<h1>Example</h1><pre><code class="lang-java"> <span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">HelloWorldDetector</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">Detector</span>
+  <span class="hljs-keyword">implements</span> <span class="hljs-title">XmlScanner</span> </span>{
+
+  <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> Issue ISSUE = Issue.create(...);
+
+  <span class="hljs-annotation">@Override</span> <span class="hljs-function"><span class="hljs-keyword">public</span> Collection&lt;String&gt; <span class="hljs-title">getApplicableElements</span><span class="hljs-params">()</span> </span>{...}
+
+  <span class="hljs-annotation">@Override</span> <span class="hljs-function"><span class="hljs-keyword">public</span> Collection&lt;String&gt; <span class="hljs-title">getApplicableAttributes</span><span class="hljs-params">()</span> </span>{...}
+
+  <span class="hljs-annotation">@Override</span> <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">visitElement</span><span class="hljs-params">(@NonNull XmlContext context,
+      @NonNull Element element)</span> </span>{...}
+
+  <span class="hljs-annotation">@Override</span> <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">visitAttribute</span><span class="hljs-params">(@NonNull XmlContext context,
+      @NonNull Attr attribute)</span> </span>{...}
+ }
+</code></pre>
+</section>
+<section id="lint_api_basics-scanner-definition" class="slide">
+<h1>Scanner</h1><blockquote>
+<p>A <code>Scanner</code> is a specialized interface for <code>Detectors</code>.</p>
+</blockquote>
+</section>
+<section id="lint_api_basics-scanner-details" class="slide">
+<h1>Scanner types</h1><ul>
+<li><code>JavaScanner</code></li>
+<li><code>ClassScanner</code></li>
+<li><code>BinaryResourceScanner</code></li>
+<li><code>ResourceFolderScanner</code></li>
+<li><code>XmlScanner</code></li>
+<li><code>GradleScanner</code></li>
+<li><code>OtherFileScanner</code></li>
+</ul>
+</section>
+<section id="lint_api_basics-scanner-example" class="slide">
+<h1>Example</h1><table>
+<thead>
+<tr>
+<th>JavaScanner</th>
+<th>XmlScanner</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>applicableSuperClasses()</code></td>
+<td><code>getApplicableElements()</code></td>
+</tr>
+<tr>
+<td><code>checkClass(...)</code></td>
+<td><code>visitElement(...)</code></td>
+</tr>
+<tr>
+<td><code>getApplicableMethodNames()</code></td>
+<td><code>getApplicableAttributes()</code></td>
+</tr>
+<tr>
+<td><code>visitMethod(...)</code></td>
+<td><code>visitAttribute(...)</code></td>
+</tr>
+<tr>
+<td>...</td>
+<td>...</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="lint_api_basics-issueregistry-definition" class="slide">
+<h1>IssueRegistry</h1><blockquote>
+<p>An <code>IssueRegistry</code> is a registry which provides a list of checks to be performed on
+an Android project.</p>
+</blockquote>
+</section>
+<section id="lint_api_basics-issueregistry-details" class="slide">
+<h1>IssueRegistry</h1><ul>
+<li>subclass <code>IssueRegistry</code></li>
+<li>override <code>getIssues()</code></li>
+<li>reference in <code>MANIFEST</code></li>
+</ul>
+<pre><code class="lang-groovy">jar {
+    manifest {
+        attributes <span class="hljs-string">'Lint-Registry'</span>:
+         <span class="hljs-string">'your.package.name.CustomIssueRegistry'</span>
+    }
+}
+</code></pre>
+</section>
+<section id="lint_api_basics-issueregistry-example" class="slide">
+<h1>Example</h1><pre><code class="lang-java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">CustomIssueRegistry</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">IssueRegistry</span> </span>{
+  <span class="hljs-annotation">@Override</span>
+  <span class="hljs-function"><span class="hljs-keyword">public</span> List&lt;Issue&gt; <span class="hljs-title">getIssues</span><span class="hljs-params">()</span> </span>{
+    <span class="hljs-keyword">return</span> Arrays.asList(             <span class="hljs-comment">//Note:</span>
+      MyCustomCheck.ISSUE,            <span class="hljs-comment">//A check actually is a detector.</span>
+      MyAdvancedCheck.AN_ISSUE,       <span class="hljs-comment">//One detector can report</span>
+      MyAdvancedCheck.ANOTHER_ISSUE   <span class="hljs-comment">//multiple types of issues.</span>
+    );
+  }
+}
+</code></pre>
+</section>
+</section>
+<section>
+<section id="hands_on-overview" class="slide">
+<h1>Hands-on</h1><ul>
+<li>Getting started</li>
+<li>Detectors</li>
+<li>Testing</li>
+<li>Application</li>
+</ul>
+</section>
+<section id="hands_on-getting-started" class="gettingstarted slide">
+<h1>Getting started</h1><h3><a href="https://github.com/a11n/CustomLintRulesWorkshop">github.com/a11n/CustomLintRulesWorkshop</a></h3><pre><code><span class="hljs-variable">$ </span>git clone <span class="hljs-symbol">https:</span>/<span class="hljs-regexp">/github.com/a</span>11n/<span class="hljs-constant">CustomLintRulesWorkshop.</span>git
+<span class="hljs-variable">$ </span>cd <span class="hljs-constant">CustomLintRulesWorkshop</span>
+
+<span class="hljs-variable">$ </span>git checkout -f section-<span class="hljs-number">1</span>
+</code></pre>
+</section>
+<section id="hands_on-pro-tips" class="slide">
+<h1>Pro tips</h1><ul>
+<li>have a look at the <a href="https://android.googlesource.com/platform/tools/base/+/master/lint/libs/lint-checks/src/main/java/com/android/tools/lint/checks">default set of checks</a></li>
+<li>use <code>SdkConstants</code> wherever possible</li>
+<li>utilize <code>LintUtils</code> when applicable</li>
+</ul>
+</section>
+<section id="hands_on-detectors-overview" class="slide">
+<h1>Detectors</h1><ul>
+<li>Simple detectors</li>
+<li>Advanced detectors</li>
+</ul>
+</section>
+<section id="hands_on-simple-detectors" class="slide">
+<h1>Simple detectors</h1><ul>
+<li>scan isolated artifacts of one type<br/>(e.g. just code or just resources)</li>
+<li>perform scan and evaluation in one phase</li>
+</ul>
+</section>
+<section id="hands_on-advanced-detectors" class="slide">
+<h1>Advanced detectors</h1><ul>
+<li>scan related artifacts of different types</li>
+<li>perform scan and evaluation in two phases</li>
+</ul>
+</section>
+<section id="hands_on-testing-intro" class="slide">
+<h1>Testing</h1><p><img src="images/05_testing_meme.jpg" alt=""></p>
+</section>
+<section id="hands_on-testing-overview" class="slide">
+<h1>Testing</h1><ul>
+<li><del>No official test support</del></li>
+<li><del>official test support since last week&#39;s Google I/O</del><br/>not working (see <a href="https://code.google.com/p/android/issues/detail?id=175161">#175161</a>)</li>
+<li><a href="https://github.com/a11n/lint-junit-rule">Lint JUnit rule</a> (still in beta)</li>
+</ul>
+</section>
+<section id="hands_on-testing-official" class="slide">
+<h1>Testing</h1><p><strong>LintDetectorTest</strong></p>
+<pre><code class="lang-java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">HardcodedValuesDetectorTest</span>  <span class="hljs-keyword">extends</span> <span class="hljs-title">AbstractCheckTest</span> </span>{
+    <span class="hljs-annotation">@Override</span>
+    <span class="hljs-function"><span class="hljs-keyword">protected</span> Detector <span class="hljs-title">getDetector</span><span class="hljs-params">()</span> </span>{
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> HardcodedValuesDetector();
+    }
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">testStrings</span><span class="hljs-params">()</span> <span class="hljs-keyword">throws</span> Exception </span>{
+        assertEquals(
+            <span class="hljs-string">"res/layout/accessibility.xml:3: Warning: [I18N] Hardcoded string \"Button\", should use @string resource [HardcodedText]\n"</span> +
+            <span class="hljs-string">"    &lt;Button android:text=\"Button\" android:id=\"@+id/button1\" android:layout_width=\"wrap_content\" android:layout_height=\"wrap_content\"&gt;&lt;/Button&gt;\n"</span> +
+            <span class="hljs-string">"            ~~~~~~~~~~~~~~~~~~~~~\n"</span> +
+            <span class="hljs-string">"res/layout/accessibility.xml:6: Warning: [I18N] Hardcoded string \"Button\", should use @string resource [HardcodedText]\n"</span> +
+            <span class="hljs-string">"    &lt;Button android:text=\"Button\" android:id=\"@+id/button2\" android:layout_width=\"wrap_content\" android:layout_height=\"wrap_content\"&gt;&lt;/Button&gt;\n"</span> +
+            <span class="hljs-string">"            ~~~~~~~~~~~~~~~~~~~~~\n"</span> +
+            <span class="hljs-string">"0 errors, 2 warnings\n"</span>,
+            lintFiles(<span class="hljs-string">"res/layout/accessibility.xml"</span>));
+    }
+}
+</code></pre>
+</section>
+<section id="hands_on-testing-convenient" class="slide">
+<h1>Testing</h1><p><strong>Lint JUnit rule</strong></p>
+<pre><code class="lang-java"><span class="hljs-annotation">@Rule</span> <span class="hljs-keyword">public</span> Lint lint = <span class="hljs-keyword">new</span> Lint();
+
+<span class="hljs-annotation">@Test</span>
+<span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">test</span><span class="hljs-params">()</span> <span class="hljs-keyword">throws</span> Exception </span>{
+  lint.setFiles(<span class="hljs-string">"AndroidManifest.xml"</span>, <span class="hljs-string">"res/values/string.xml"</span>);
+  lint.setIssues(MyCustomRule.ISSUE);
+
+  lint.analyze();
+
+  List&lt;Warning&gt; warnings = lint.getWarnings();
+
+  assertThat(warnings).hasSize(<span class="hljs-number">2</span>);
+}
+</code></pre>
+</section>
+<section id="hands_on-application-overview" class="slide">
+<h1>Application</h1><ul>
+<li>Basic approach</li>
+<li>Integrated approach</li>
+</ul>
+</section>
+<section id="hands_on-basic-aproach-overview" class="slide">
+<h1>Basic approach</h1><ul>
+<li>utilizes basic Lint extension feature</li>
+<li>two steps setup<ol>
+<li>assemble custom Lint rules into JAR</li>
+<li>copy JAR to <code>~/.android/lint/</code></li>
+</ol>
+</li>
+</ul>
+</section>
+<section id="hands_on-basic-approach-example" class="slide">
+<h1>Basic approach</h1><pre><code><span class="hljs-shebang">#!/bin/sh
+</span>
+<span class="hljs-comment"># Build .jar</span>
+./gradlew assemble
+
+<span class="hljs-comment"># Install</span>
+<span class="hljs-keyword">if</span> [ ! <span class="hljs-operator">-d</span> <span class="hljs-string">"~/.android/lint/"</span> ]; <span class="hljs-keyword">then</span>
+  mkdir ~/.android/lint/
+<span class="hljs-keyword">fi</span>
+
+cp build/libs/lint.jar ~/.android/lint/
+</code></pre>
+</section>
+<section id="hands_on-basic-approach-pros-n-cons" class="slide">
+<h1>Basic approach</h1><table>
+<thead>
+<tr>
+<th>Pros</th>
+<th>Cons</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>just assemble and copy</td>
+<td>no straightforward distribution and configuration</td>
+</tr>
+<tr>
+<td>one resulting JAR</td>
+<td>no project-specific rules</td>
+</tr>
+<tr>
+<td>no changes in the project to analyze</td>
+<td>inconvenient for multi developer teams</td>
+</tr>
+<tr>
+<td>applied for all analyzed projects</td>
+<td>inconvenient for CI environments</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="hands_on-integrated-approach-overview" class="slide">
+<h1>Integrated approach</h1><ul>
+<li>uses AAR bundle as wrapper</li>
+<li>two steps setup<ol>
+<li>wrap custom Lint rules into an AAR</li>
+<li>make application project depend on that AAR</li>
+</ol>
+</li>
+</ul>
+</section>
+<section id="hands_on-integrated-approach-example" class="slide">
+<h2>Three options for dependencies</h2><ul>
+<li>Copy the AAR to the libs folder</li>
+</ul>
+<pre><code class="lang-groovy">dependencies {
+  compile fileTree(<span class="hljs-string">dir:</span> <span class="hljs-string">'libs'</span>, <span class="hljs-string">include:</span> <span class="hljs-string">'*.jar'</span>)
+}
+</code></pre>
+<ul>
+<li>Deploy the AAR to a repository</li>
+</ul>
+<pre><code class="lang-groovy">dependencies {
+  compile <span class="hljs-string">'your.package.name:custom-lint:1.0.0@aar'</span>
+}
+</code></pre>
+</section>
+<section id="hands_on-integrated-approach-example" class="slide">
+<h2>Three options for dependencies</h2><ul>
+<li>Have a Java module for the Lint rules and an Android library module as wrapper</li>
+</ul>
+<pre><code class="lang-java">Android application project
+--app         <span class="hljs-comment">//default Android application module</span>
+--lint        <span class="hljs-comment">//Android library, acts as wrapper for the Lint rules</span>
+--lintrules   <span class="hljs-comment">//Java module with your custom Lint rules</span>
+</code></pre>
+<pre><code class="lang-groovy">project.afterEvaluate {
+  <span class="hljs-keyword">def</span> compileLint = project.tasks.getByPath(<span class="hljs-string">':lint:compileLint'</span>)
+  compileLint.dependsOn <span class="hljs-string">':lintrules:jar'</span>
+  compileLint &lt;&lt; {
+    copy{
+      from <span class="hljs-string">'../lintrules/build/libs'</span>
+      into <span class="hljs-string">'build/intermediates/lint'</span>
+    }
+  }
+}
+</code></pre>
+</section>
+<section id="hands_on-integrated-approach-pros-n-cons" class="slide">
+<h1>Integrated approach</h1><table>
+<thead>
+<tr>
+<th>Pros</th>
+<th>Cons</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>allows project specific rules</td>
+<td>changes in project required</td>
+</tr>
+<tr>
+<td>integrated within project</td>
+<td>not applied for all analyzed projects</td>
+</tr>
+<tr>
+<td>ideal for multi developer teams</td>
+<td><em>(no official documentation on how to wrap into AAR bundle available)</em></td>
+</tr>
+<tr>
+<td>perfect for CI environments</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section>
+<section id="real_world_scenarios-overview" class="slide">
+<h1>Real world scenarios</h1><ul>
+<li>Placeholder</li>
+<li>Naming conventions<ul>
+<li>Activity/Fragment class names</li>
+<li>Layout names</li>
+<li>String references</li>
+<li>ID prefixes</li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="real_world_scenarios-placeholder" class="slide">
+<h1>Placeholder</h1><ul>
+<li>used for layout purposes</li>
+<li>help to get a meaningful overview</li>
+<li>present applied styles</li>
+<li>show wrapping</li>
+</ul>
+</section>
+<section id="real_world_scenarios-placeholder-example" class="slide">
+<h1>Example</h1><p><img src="images/07_placeholder_example_1.png" alt=""></p>
+</section>
+<section id="real_world_scenarios-placeholder-example" class="slide">
+<h1>Example</h1><p><img src="images/07_placeholder_example_2.png" alt=""></p>
+</section>
+<section id="real_world_scenarios-naming-conventions" class="slide">
+<h1>Naming conventions</h1>
+</section>
+<section id="real_world_scenarios-activity-fragment-class-names" class="slide">
+<h2>Activity/Fragment class names</h2><table>
+<thead>
+<tr>
+<th>Natural names</th>
+<th>Conventional names</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>...<br /><code>ConsumedMaterialsActivity</code><br /><code>CustomerSignatureFragment</code><br /><code>OrderConfirmationFragment</code><br /><code>OrderDataModel</code><br /><code>OrderReportActivity</code><br /><code>OrderReportViewModel</code><br /><code>VanStockMaterialFragment</code><br />...</td>
+<td>...<br /><code>ActivityConsumedMaterials</code><br /><code>ActivityOrderReport</code><br /><code>FragmentCustomerSignature</code><br /><code>FragmentOrderConfirmation</code><br /><code>FragmentVanStockMaterial</code><br /><code>ModelOrderData</code><br /><code>ViewModelOrderReport</code><br />...</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="real_world_scenarios-layout-names" class="slide">
+<h1>Layout names</h1><ul>
+<li>should express where they are going to be used</li>
+<li>Examples:<ul>
+<li><code>activity_order_status.xml</code></li>
+<li><code>fragment_customer_details.xml</code></li>
+<li><code>list_item_purchase_order.xml</code></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="real_world_scenarios-string-references-overview" class="slide">
+<h1>String references</h1><p>From experience, string references</p>
+<ul>
+<li>should be tied to a widget in a <strong>1:1 relation!!</strong><ul>
+<li>reduces semantical incorrectness</li>
+<li>allows outsourcing of translation process</li>
+</ul>
+</li>
+<li>may be refined by literals to avoid redundancy</li>
+<li>could be declared in distinct and dedicated files</li>
+</ul>
+</section>
+<section id="real_world_scenarios-string-references-example" class="slide">
+<h2>Example</h2><pre><code class="lang-xml"><span class="hljs-comment">&lt;!-- fragment_customer_signature.xml --&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-title">TextView</span> <span class="hljs-attribute">android:id</span>=<span class="hljs-value">"@+id/tvCustomerName"</span>
+  <span class="hljs-attribute">android:text</span>=<span class="hljs-value">"@string/fragment_customer_signature_tvCustomerName_text"</span> /&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-title">EditText</span> <span class="hljs-attribute">android:id</span>=<span class="hljs-value">"@+id/etCustomerName"</span>
+  <span class="hljs-attribute">android:hint</span>=<span class="hljs-value">"@string/fragment_customer_signature_etCustomerName_hint"</span> /&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-title">Button</span> <span class="hljs-attribute">android:id</span>=<span class="hljs-value">"@+id/btSubmit"</span>
+  <span class="hljs-attribute">android:text</span>=<span class="hljs-value">"@string/fragment_customer_signature_btSubmit_text"</span> /&gt;</span>
+
+<span class="hljs-comment">&lt;!-- string.xml --&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-title">string</span> <span class="hljs-attribute">name</span>=<span class="hljs-value">"fragment_customer_signature_tvCustomerName_text"</span>&gt;</span>
+  Please enter the customer name:
+<span class="hljs-tag">&lt;/<span class="hljs-title">string</span>&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-title">string</span> <span class="hljs-attribute">name</span>=<span class="hljs-value">"fragment_customer_signature_btSubmit_text"</span>&gt;</span>
+  @string/literal_submit
+<span class="hljs-tag">&lt;/<span class="hljs-title">string</span>&gt;</span>
+</code></pre>
+</section>
+<section id="real_world_scenarios-id-prefixes" class="slide">
+<h1>ID prefixes</h1><ul>
+<li>infer semantics<ul>
+<li>on widget types</li>
+<li>on inter-widget relations</li>
+</ul>
+</li>
+<li>speed up code completion</li>
+</ul>
+<pre><code class="lang-xml"><span class="hljs-tag">&lt;<span class="hljs-title">RelativeLayout</span> <span class="hljs-attribute">android:id</span>=<span class="hljs-value">"@+id/llCustomerDetails"</span> <span class="hljs-attribute">...</span> &gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-title">ImageView</span> <span class="hljs-attribute">android:id</span>=<span class="hljs-value">"@+id/ivCustomerName"</span> <span class="hljs-attribute">...</span> /&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-title">TextView</span> <span class="hljs-attribute">android:id</span>=<span class="hljs-value">"@+id/tvCustomerName"</span> <span class="hljs-attribute">...</span> /&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-title">EditText</span> <span class="hljs-attribute">android:id</span>=<span class="hljs-value">"@+id/etCustomerName"</span> <span class="hljs-attribute">...</span> /&gt;</span>
+  ...
+  <span class="hljs-tag">&lt;<span class="hljs-title">Button</span> <span class="hljs-attribute">android:id</span>=<span class="hljs-value">"@+id/btSubmit"</span> <span class="hljs-attribute">...</span> /&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-title">RelativeLayout</span>&gt;</span>
+</code></pre>
+</section>
+</section>
+<section id="summary" class="slide">
+<h1>Summary</h1><ul>
+<li>custom Lint rules are written by extending <code>Detectors</code> and implementing <code>Scanners</code></li>
+<li>complex rules have a scan and an evaluation phase</li>
+<li>Lint API provides convenient access to different types of development artifacts</li>
+<li>AAR format allows easy deployment and project-related rules</li>
+</ul>
+</section>
+<section id="what_s_next" class="slide">
+<h1>What&#39;s next</h1><ul>
+<li>release of reference guide for creating custom Lint rules</li>
+<li>improving Lint JUnit rule</li>
+<li>extending API<ul>
+<li>advanced <code>LintUtils</code></li>
+<li>advanced <code>BaseDetectors</code></li>
+</ul>
+</li>
+<li>encourage for more exchange<br/>(e.g. on StackOverflow)</li>
+</ul>
+</section>
+<section id="thanks_and_qa" class="slide">
+<h3>Thank you for your attention.</h3><h1>Q&amp;A</h1><p><i class="fa fa-twitter"></i><a href="https://twitter.com/q2ad">q2ad</a>
+<i class="fa fa-github"></i><a href="https://github.com/a11n">a11n</a></p>
+</section></div>
+    </div>
+
+    <script src="lib/js/head.min.js"></script>
+    <script src="js/reveal.js"></script>
+
+    <script>
+    // Full list of configuration options available at:
+    // https://github.com/hakimel/reveal.js#configuration
+    Reveal.initialize({
+      controls: true,
+      progress: true,
+      history: true,
+      center: true,
+
+      transition: Reveal.getQueryHash().transition || 'slide', // none/fade/slide/convex/concave/zoom
+
+      // Optional reveal.js plugins
+      dependencies: [
+        //{ src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+        //{ src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+        //{ src: 'plugin/highlight/highlight.js', async: true, condition: function() { return !!document.querySelector( 'pre code' ); }, callback: function() { hljs.initHighlightingOnLoad(); } },
+        { src: 'plugin/zoom-js/zoom.js', async: true },
+        { src: 'plugin/notes/notes.js', async: true }
+      ]
+    });
+    </script>
+
+    <script src="js/dynamic-theme.js"></script><script src="js/custom.js"></script>
+
+  </body>
+</html>
