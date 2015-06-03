@@ -7,5 +7,5 @@ $class:gettingstarted$
 $ git clone https://github.com/a11n/CustomLintRulesWorkshop.git
 $ cd CustomLintRulesWorkshop
 
-$ git checkout -f step-1
+$ git checkout -f section-1
 ```
