@@ -8,11 +8,15 @@ Please find further details at the [workshop page](http://droidcon.de/session/cu
 
 Check out [this repository](https://github.com/a11n/CustomLintRulesWorkshop) for sources and examples elaborated in the "Hands-on" part.
 
+## How to view?
+
+Find a dynamic version (with animation, ...) of the slides [here](http://a11n.github.io/lint-workshop-slides).
+
+Find a static version of the slides [here](https://speakerdeck.com/a11n/custom-lint-rules-improve-your-code-quality-with-dedicated-conventions).
+
 ## How to use?
 
 The slides are written in [Markdown](https://help.github.com/articles/markdown-basics/), compiled by [prez](https://github.com/lmtm/prez) and presented by [RevealJS](https://github.com/hakimel/reveal.js).
-
-To view the presentation just go to http://a11n.github.io/lint-workshop-slides.
 
 In order to compile this presentation by yourself three simple steps are required:
 
